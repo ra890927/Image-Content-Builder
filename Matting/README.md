@@ -20,8 +20,10 @@ python matting.py --fg ./images/0_image.png --img ./images/0_trimap.png --bg ./i
 # --img: trimap path
 # --bg:  background image path
 # --store: save output_result
+# --p_x, --position_x: object的x軸偏移量
+# --p_y, --position_y: object的y軸偏移量
 ```
 
 ## Program
 1. 主程式: matting.py
-2. Output 是合成後的結果
+2. Output裡面是合成結果與model predict的alpha image
