@@ -7,11 +7,6 @@ import numpy as np
 import torch
 from torchvision import transforms
 
-# from config import device, fg_path_test, a_path_test, bg_path_test
-# from data_gen import data_transforms, gen_trimap, fg_test_files, bg_test_files
-# from test import gen_test_names
-# from utils import compute_mse, compute_sad, ensure_folder, draw_str
-
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # def gen_trimap(alpha):
@@ -42,19 +37,11 @@ data_transforms = {
 def composite4(fg, bg, a, w, h):
     print(fg.shape, bg.shape, a.shape, w, h)
     fg = np.array(fg, np.float32)
-    bg_h, bg_w = bg.shape[:2]
-    x = 0
-    if bg_w > w:
-        x = np.random.randint(0, bg_w - w)
-    y = 0
-    if bg_h > h:
-        y = np.random.randint(0, bg_h - h)
-    bg = np.array(bg[y:y + h, x:x + w], np.float32)
-    alpha = np.zeros((h, w, 1), np.float32)
-    alpha[:, :, 0] = a
+    alpha = np.expand_dims(a,axis=2)
     im = alpha * fg + (1 - alpha) * bg
     im = im.astype(np.uint8)
     return im, bg
+
 
 def generate_result(args):
     ckpt = torch.load(args.ckpt_point)
@@ -63,9 +50,25 @@ def generate_result(args):
     model.eval()
     
     img = cv.imread(args.fg)
+    fg = img
     trimap = cv.imread(args.img, cv.IMREAD_GRAYSCALE)
     bg = cv.imread(args.bg)
     transformer = data_transforms['valid']
+    
+    # 算中心點位置 - 偏移量
+    target_center = (img.shape[1] // 2 - args.p_x, img.shape[0] // 2 - args.p_y) 
+    background_center = (bg.shape[1] // 2, bg.shape[0] // 2)
+    
+    #計算平移向量
+    translation_vector = np.array(background_center) - np.array(target_center)
+    #平移image
+    target_translated = cv.warpAffine(img, np.float32([[1, 0, translation_vector[0]], 
+                                                        [0, 1, translation_vector[1]]]), (bg.shape[1], bg.shape[0]))
+    img = target_translated
+    
+    trimap_translated = cv.warpAffine(trimap, np.float32([[1, 0, translation_vector[0]], 
+                                                        [0, 1, translation_vector[1]]]), (bg.shape[1], bg.shape[0]))
+    trimap = trimap_translated
     
     h, w = img.shape[:2]
     x = torch.zeros((1, 4, h, w), dtype=torch.float)
@@ -89,15 +92,7 @@ def generate_result(args):
     if(args.store):
         cv.imwrite(f"{args.output_folder}/pred_alpha.png", out)
     
-    # 拿到alpha之後就可以做matting了
-    bh, bw = bg.shape[:2]
-    wratio = w / bw
-    hratio = h / bh
-    ratio = wratio if wratio > hratio else hratio
-#     print('ratio: ' + str(ratio))
-    if ratio > 1:
-        bg = cv.resize(src=bg, dsize=(math.ceil(bw * ratio), math.ceil(bh * ratio)),interpolation=cv.INTER_CUBIC)
-            
+    # 拿到alpha之後就可以做合成了          
     im, bg = composite4(img, bg, pred, w, h)
     
     if(args.store):
@@ -118,6 +113,8 @@ if __name__ == '__main__':
     parser.add_argument("--img", "--trimap", default="./0_trimap.png", type=str)
     parser.add_argument("--bg", "--background", default="./new_bg.png", type=str)
     parser.add_argument("--store", "--output_result", action='store_true')
+    parser.add_argument("--p_x", "--position_x", default=200, type=int)
+    parser.add_argument("--p_y", "--position_y", default=50, type=int)
     
     args = parser.parse_args()
     main(args)
