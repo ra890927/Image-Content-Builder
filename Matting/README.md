@@ -9,6 +9,7 @@ Python 3.5.2
 PyTorch 1.1.0
 wget https://github.com/foamliu/Deep-Image-Matting-PyTorch/releases/download/v1.0/BEST_checkpoint.tar
 
+pip install torchsummary
 ```
 
 ## Usage

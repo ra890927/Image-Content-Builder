@@ -122,6 +122,25 @@ if __name__ == '__main__':
     cropped_image, cropped_mask = generate_crop(ARGS)
     trimap = generate_trimap(ARGS, cropped_mask)
 
+    plt.axis('off')
+    fig = plt.imshow(cropped_image)
+    fig.axes.get_xaxis().set_visible(False)
+    fig.axes.get_yaxis().set_visible(False)
+
+    plt.savefig('test_output.jpg',
+                bbox_inches='tight',
+                pad_inches=0,
+                format='jpg')
+    
+    plt.axis('off')
+    fig = plt.imshow(trimap, cmap="gray")
+    fig.axes.get_xaxis().set_visible(False)
+    fig.axes.get_yaxis().set_visible(False)
+
+    plt.savefig('test_output2.jpg',
+                bbox_inches='tight',
+                pad_inches=0,
+                format='jpg')
     # Pass "cropped_image", "trimap" to next part
 
 
